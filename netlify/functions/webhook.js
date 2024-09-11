@@ -1,55 +1,57 @@
+const express = require('express');
 const crypto = require('crypto');
 const axios = require('axios');
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ message: 'Method Not Allowed' })
-    };
-  }
+const app = express();
+app.use(express.json());
 
-  // Parse the request body
-  const { event_name, email, currency, value, business_name, contact } = JSON.parse(event.body);
+app.post('/netlify/functions/webhook', async (req, res) => {
+  const { email, event_name, currency, value, business_name, contact } = req.body;
 
-  // Generate SHA-256 hash of the email
-  const emailHash = crypto.createHash('sha256').update(email).digest('hex');
+  // Gera o hash SHA-256 do email
+  const emailHash = email ? crypto.createHash('sha256').update(email).digest('hex') : '';
 
-  // Get the current timestamp in seconds
+  // Gera o timestamp atual (em segundos desde o Epoch)
   const event_time = Math.floor(Date.now() / 1000);
 
-  // Define the payload for Meta Conversion API
+  // Monta o payload para o evento
   const payload = {
-    event_name: event_name,
-    event_time: event_time,
-    action_source: 'website',
-    event_source_url: 'https://app.hidrabeauty.uk/maquininha-ton',
-    user_data: {
-      em: emailHash,
-      fn: business_name,  // Business name
-      ph: contact         // Contact (e.g., phone)
-    },
-    custom_data: {
-      currency: currency || 'BRL',  // Default to BRL if currency is not provided
-      value: value || 0             // Default to 0 if value is not provided
-    }
+    data: [
+      {
+        event_name: event_name || "Iniciou",
+        event_time: event_time,
+        action_source: 'website',
+        event_source_url: 'https://app.hidrabeauty.uk/maquininha-ton', // Página de onde vem o evento
+        user_data: {
+          em: emailHash,
+          fn: business_name || '',  // Nome do negócio
+          ph: contact || ''         // Contato (telefone, por exemplo)
+        },
+        custom_data: {
+          currency: currency || 'BRL',  // Moeda (BRL por padrão)
+          value: value || 0             // Valor do evento
+        }
+      }
+    ]
   };
 
-  // Send the data to Meta Conversion API
   try {
-    await axios.post('https://graph.facebook.com/v13.0/1064184408385925/events', payload, {
+    // Envia para a API de Conversão da Meta
+    const response = await axios.post(`https://graph.facebook.com/v13.0/1064184408385925/events`, payload, {
       headers: {
-        Authorization: `Bearer SEU_TOKEN`
+        Authorization: `Bearer IEAALb96W0Gk4BOwX8j3tLMkZAQcry5SVH1ECA8F4EK9s5FpIeGWDVffq6KtScFGWcGiwKmE5LcMc1v7yTMNeegxzTeYTTgWNhlXx2ZBLvQibBDoApMo5xYZAaRSX8MjceSW3SWqP4RhZBwOsZAlenkJS60UpAjNJfsRRjQOx2Ul7NqFVUhBkyMgi8ZCgJqeDOzCVgZDZD`
       }
     });
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Evento enviado com sucesso' })
-    };
+
+    res.status(200).json({ message: 'Evento enviado com sucesso', data: response.data });
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Erro ao enviar evento', error: error.message })
-    };
+    console.error('Erro ao enviar evento:', error);
+    res.status(500).json({ message: 'Erro ao enviar evento', error: error.message });
   }
-};
+});
+
+// Inicia o servidor na porta 3000
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
