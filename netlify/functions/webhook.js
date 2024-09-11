@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
   try {
     await axios.post('https://graph.facebook.com/v13.0/1064184408385925/events', payload, {
       headers: {
-        Authorization: `Bearer SEU_TOKEN`
+        Authorization: `Bearer IEAALb96W0Gk4BOwX8j3tLMkZAQcry5SVH1ECA8F4EK9s5FpIeGWDVffq6KtScFGWcGiwKmE5LcMc1v7yTMNeegxzTeYTTgWNhlXx2ZBLvQibBDoApMo5xYZAaRSX8MjceSW3SWqP4RhZBwOsZAlenkJS60UpAjNJfsRRjQOx2Ul7NqFVUhBkyMgi8ZCgJqeDOzCVgZDZD`
       }
     });
     return {
